@@ -1,0 +1,213 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OrangeHRM Automation Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>OrangeHRM Automation Dashboard</h1>
+        <p>Automated Employee Registration System</p>
+
+        <form id="employeeForm">
+
+            <h2>OrangeHRM Login Details</h2>
+
+            <div class="form-group">
+                <label>Username</label>
+                <input
+                    type="text"
+                    name="username"
+                    placeholder="Enter OrangeHRM username"
+                    value="Admin"
+                    required>
+            </div>
+
+            <div class="form-group">
+                <label>Password</label>
+                <input
+                    type="password"
+                    name="password"
+                    placeholder="Enter OrangeHRM password"
+                    required>
+            </div>
+
+            <h2>Employee Information</h2>
+
+            <div class="form-group">
+                <label>First Name</label>
+                <input
+                    type="text"
+                    name="first_name"
+                    placeholder="Enter first name"
+                    required>
+            </div>
+
+            <div class="form-group">
+                <label>Middle Name (Optional)</label>
+                <input
+                    type="text"
+                    name="middle_name"
+                    placeholder="Enter middle name">
+            </div>
+
+            <div class="form-group">
+                <label>Last Name</label>
+                <input
+                    type="text"
+                    name="last_name"
+                    placeholder="Enter last name"
+                    required>
+            </div>
+
+            <div class="form-group">
+                <label>Employee ID</label>
+                <input
+                    type="text"
+                    name="employee_id"
+                    placeholder="Enter employee ID"
+                    required>
+            </div>
+
+            <button type="submit" id="startButton">
+                Start Automation
+            </button>
+
+        </form>
+
+        <div id="result"></div>
+
+    </div>
+
+    <script>
+
+        document.getElementById("employeeForm").addEventListener(
+            "submit",
+            async function (event) {
+
+                event.preventDefault();
+
+                const formData = new FormData(this);
+
+                const employeeData = {
+                    username: formData.get("username").trim(),
+                    password: formData.get("password"),
+                    first_name: formData.get("first_name").trim(),
+                    middle_name: formData.get("middle_name").trim(),
+                    last_name: formData.get("last_name").trim(),
+                    employee_id: formData.get("employee_id").trim()
+                };
+
+                const resultDiv = document.getElementById("result");
+                const submitButton = document.getElementById("startButton");
+
+                submitButton.disabled = true;
+                submitButton.innerText = "Automation Running...";
+
+                resultDiv.innerHTML = `
+                    <h3>Automation Started</h3>
+                    <p>Connecting to OrangeHRM. Please wait...</p>
+                    <p>Employee creation and verification are in progress.</p>
+                `;
+
+                try {
+
+                    const response = await fetch("/start-automation", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(employeeData)
+                    });
+
+                    const result = await response.json();
+
+                    if (!response.ok || result.status !== "success") {
+                        throw new Error(
+                            result.message || "Automation failed."
+                        );
+                    }
+
+                    const employee = result.employee || {};
+
+                    resultDiv.innerHTML = `
+                        <h3>Automation Completed Successfully!</h3>
+
+                        <p>${result.message}</p>
+
+                        <hr>
+
+                        <h3>Employee Details</h3>
+
+                        <p>
+                            <strong>Employee ID:</strong>
+                            ${escapeHTML(result.employee_id)}
+                        </p>
+
+                        <p>
+                            <strong>Name:</strong>
+                            ${escapeHTML(employee["First (& Middle) Name"] || "")}
+                            ${escapeHTML(employee["Last Name"] || "")}
+                        </p>
+
+                        <p>
+                            <strong>Verification:</strong>
+                            Employee found in OrangeHRM Employee List.
+                        </p>
+
+                        <p>
+                            <strong>Total Records Exported:</strong>
+                            ${Number(result.total_records) || 0}
+                        </p>
+
+                        <hr>
+
+                        <h3>CSV Export</h3>
+
+                        <p>Employee records exported successfully.</p>
+
+                        <a href="${encodeURI(result.download_url)}">
+                            Download Employee CSV
+                        </a>
+                    `;
+
+                } catch (error) {
+
+                    resultDiv.innerHTML = `
+                        <h3>Automation Failed</h3>
+                        <p>${escapeHTML(error.message)}</p>
+                    `;
+
+                } finally {
+
+                    submitButton.disabled = false;
+                    submitButton.innerText = "Start Automation";
+
+                }
+
+            }
+        );
+
+        function escapeHTML(value) {
+            return String(value).replace(/[&<>"']/g, function (character) {
+                return {
+                    "&": "&amp;",
+                    "<": "&lt;",
+                    ">": "&gt;",
+                    '"': "&quot;",
+                    "'": "&#039;"
+                }[character];
+            });
+        }
+
+    </script>
+
+</body>
+</html>
